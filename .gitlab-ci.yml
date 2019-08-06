@@ -1,0 +1,29 @@
+stages:
+- build
+- nuget
+
+build:
+  tags:
+  - docker
+  image: microsoft/dotnet:2.2-sdk
+  stage: build
+  script:
+  - dotnet build -c Release
+  - dotnet test
+
+nuget:
+  tags:
+  - docker
+  image: microsoft/dotnet:2.2-sdk
+  stage: nuget
+  only:
+  - nuget
+  script:
+  - dotnet build -c Release
+  - dotnet pack ./Core -c Release -o "${PWD}/artifacts/"
+  - dotnet nuget push --force-english-output -s https://api.nuget.org/v3/index.json -k "${NUGET_API_KEY}" ./artifacts/*.nupkg
+  artifacts:
+    expire_in: 31d
+    paths:
+    - artifacts/*
+
