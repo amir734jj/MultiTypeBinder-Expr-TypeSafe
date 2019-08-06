@@ -1,4 +1,4 @@
-# MultiTypeBinder
+# MultiTypeBinder-Expr
 
 This library is similar to my [MultiTypeBinder](https://github.com/amir734jj/MultiTypeBinder) but used LINQ Expression tress to build getter and setters.
 
