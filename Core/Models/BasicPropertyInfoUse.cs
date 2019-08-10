@@ -1,6 +1,6 @@
 using System;
 
-namespace MultiTypeBinderExpr.Models
+namespace MultiTypeBinderExprTypeSafe.Models
 {
     public class BasicPropertyInfoUse
     {

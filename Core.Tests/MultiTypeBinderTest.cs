@@ -1,14 +1,12 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
+using MultiTypeBinderExprTypeSafe.Interfaces;
 using Xunit;
 
-namespace MultiTypeBinderExpr.Tests
+namespace MultiTypeBinderExprTypeSafe.Tests
 {
-    public enum Key
+    public interface ICommon
     {
-        Name,
-        RandomKey
+        string Name { get; set; }
     }
 
     public class EntityA
@@ -23,101 +21,50 @@ namespace MultiTypeBinderExpr.Tests
 
     public class MultiTypeBinderTest
     {
+        private readonly IMultiTypeBinder<ICommon> _utility;
+
+        public MultiTypeBinderTest()
+        {
+            _utility = new MultiTypeBinderBuilder<ICommon>()
+                .WithType<EntityA>(x =>
+                    x.WithProperty(y => y.Name, y => y.Name1)
+                        .FinalizeType())
+                .WithType<EntityB>(x =>
+                    x.WithProperty(y => y.Name, y => y.Name2)
+                        .FinalizeType())
+                .Build();
+        }
+
         [Fact]
-        public void Test__Get()
+        public void Test__Getter()
         {
             // Arrange
-            var a = new EntityA {Name1 = "A"};
-            var b = new EntityB {Name2 = "B"};
-
-            var multiTypeItems = new MultiTypeBinderBuilder<Key>()
-                .WithType<EntityA>(opt1 => opt1
-                    .WithProperty(x => x.Name1, Key.Name)
-                    .FinalizeType())
-                .WithType<EntityB>(opt1 => opt1
-                    .WithProperty(x => x.Name2, Key.Name)
-                    .FinalizeType())
-                .Build()
-                .Map(new List<object> {a, b});
+            var entityA = new EntityA {Name1 = "Test1"};
+            var entityB = new EntityB {Name2 = "Test2"};
 
             // Act
-            var v1 = multiTypeItems.First()[Key.Name];
-            var v2 = multiTypeItems.Last()[Key.Name];
+            var commons = _utility.Map(new object[] { entityA, entityB });
 
             // Assert
-            Assert.Equal(2, multiTypeItems.Count);
-            Assert.Equal("A", v1);
-            Assert.Equal("B", v2);
+            Assert.Equal(commons.First().Name, entityA.Name1);
+            Assert.Equal(commons.Last().Name, entityB.Name2);
         }
-
+        
         [Fact]
-        public void Test__Set()
+        public void Test__Setter()
         {
             // Arrange
-            var a = new EntityA {Name1 = "A"};
-            var b = new EntityB {Name2 = "B"};
-
-            var multiTypeItems = new MultiTypeBinderBuilder<Key>()
-                .WithType<EntityA>(opt1 => opt1
-                    .WithProperty(x => x.Name1, Key.Name)
-                    .FinalizeType())
-                .WithType<EntityB>(opt1 => opt1
-                    .WithProperty(x => x.Name2, Key.Name)
-                    .FinalizeType())
-                .Build()
-                .Map(new List<object> {a, b});
+            var entityA = new EntityA {Name1 = "Test1"};
+            var entityB = new EntityB {Name2 = "Test2"};
 
             // Act
-            multiTypeItems.First()[Key.Name] = "updated A";
-            multiTypeItems.Last()[Key.Name] = "updated B";
-
-            var v1 = multiTypeItems.First()[Key.Name];
-            var v2 = multiTypeItems.Last()[Key.Name];
+            var commons = _utility.Map(new object[] { entityA, entityB });
+            commons.First().Name = "Updated Test1";
+            commons.Last().Name = "Updated Test2";
 
             // Assert
-            Assert.Equal(2, multiTypeItems.Count);
-            Assert.Equal("updated A", v1);
-            Assert.Equal("updated B", v2);
-        }
-
-        [Fact]
-        public void Test__Get_Fail()
-        {
-            // Arrange
-            var source = new EntityB {Name2 = "A"};
-            
-            var multiTypeItems = new MultiTypeBinderBuilder<Key>()
-                .WithType<EntityA>(opt1 => opt1
-                    .WithProperty(x => x.Name1, Key.Name)
-                    .FinalizeType())
-                .WithType<EntityB>(opt1 => opt1
-                    .WithProperty(x => x.Name2, Key.Name)
-                    .FinalizeType())
-                .Build()
-                .Map(new List<object> {source});
-
-            // Act, Assert
-            Assert.Throws<Exception>(() => multiTypeItems.First()[Key.RandomKey]);
-        }
-
-        [Fact]
-        public void Test__Set_Fail()
-        {
-            // Arrange
-            var source = new EntityA {Name1 = "A"};
-
-            var multiTypeItems = new MultiTypeBinderBuilder<Key>()
-                .WithType<EntityA>(opt1 => opt1
-                    .WithProperty(x => x.Name1, Key.Name)
-                    .FinalizeType())
-                .WithType<EntityB>(opt1 => opt1
-                    .WithProperty(x => x.Name2, Key.Name)
-                    .FinalizeType())
-                .Build()
-                .Map(new List<object> {source});
-
-            // Act, Assert
-            Assert.Throws<InvalidCastException>(() => multiTypeItems.First()[Key.Name] = 123);
+            Assert.Equal(commons.First().Name, entityA.Name1);
+            Assert.Equal(commons.Last().Name, entityB.Name2);
         }
     }
 }

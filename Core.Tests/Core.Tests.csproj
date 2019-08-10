@@ -5,7 +5,7 @@
 
         <IsPackable>false</IsPackable>
 
-        <RootNamespace>MultiTypeBinderExpr.Tests</RootNamespace>
+        <RootNamespace>MultiTypeBinderExprTypeSafe.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

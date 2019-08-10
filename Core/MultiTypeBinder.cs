@@ -1,122 +1,100 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Linq.Expressions;
-using MultiTypeBinderExpr.Interfaces;
-using MultiTypeBinderExpr.Models;
-using MultiTypeBinderExpr.Utilities;
+using MultiTypeBinderExprTypeSafe.Interfaces;
+using MultiTypeBinderExprTypeSafe.Utilities;
+using static MultiTypeBinderExprTypeSafe.Utilities.BasicPropertyInfoBuildUtility;
 
-namespace MultiTypeBinderExpr
+namespace MultiTypeBinderExprTypeSafe
 {
-    public class MultiTypeItem<TEnum> : IMultiTypeItem<TEnum> where TEnum : Enum
+    public class MultiTypeBinder<TCommon> : IMultiTypeBinder<TCommon>
     {
-        private readonly Dictionary<TEnum, BasicPropertyInfoUse> _table;
+        private readonly IReadOnlyDictionary<KeyValuePair<Type, IReadOnlyDictionary<string, string>>, Type>
+            _augmentedTable;
 
-        public MultiTypeItem(Dictionary<TEnum, BasicPropertyInfoUse> table)
+        public MultiTypeBinder(IReadOnlyDictionary<Type, IReadOnlyDictionary<string, string>> table)
         {
-            _table = table;
+            var cmType = typeof(TCommon);
+
+            _augmentedTable = table.ToDictionary(x => x, x => new CustomTypeGenerator(x.Key, cmType, x.Value).EmittedType);
         }
 
-        public object this[TEnum key]
+        public List<TCommon> Map(IEnumerable<object> items)
         {
-            get => _table[key].GetValue();
-            set => _table[key].SetValue(value);
-        }
-    }
-
-    public class MultiTypeBinder<TEnum> : IMultiTypeBinder<TEnum> where TEnum : Enum
-    {
-        private readonly Dictionary<Type, Dictionary<TEnum, BasicPropertyInfoBuild>> _basicTypeInfos;
-
-        public MultiTypeBinder(Dictionary<Type, Dictionary<TEnum, BasicPropertyInfoBuild>> basicTypeInfos)
-        {
-            _basicTypeInfos = basicTypeInfos;
-        }
-
-        public List<MultiTypeItem<TEnum>> Map(IEnumerable<object> items)
-        {
-            return items?.Select(x =>
+            return items?.Select(item =>
             {
-                if (x == null)
-                {
-                    throw new NullReferenceException("Object is null");
-                }
-                
-                var key = _basicTypeInfos.Keys.FirstOrDefault(y => y.IsInstanceOfType(x)) ?? throw new Exception($"There is no binder registered for type of {x.GetType().Name}");
+                var mapper = _augmentedTable.FirstOrDefault(x => x.Key.Key.IsInstanceOfType(item));
 
-                var value = _basicTypeInfos[key].ToDictionary(z => z.Key, z => new BasicPropertyInfoUse
+                if (mapper.Equals(
+                    default(KeyValuePair<KeyValuePair<Type, IReadOnlyDictionary<string, string>>, Type>))
+                )
                 {
-                    GetValue = () => z.Value.GetValue(x),
-                    SetValue = a => z.Value.SetValue(x, a)
-                });
-                
-                return new MultiTypeItem<TEnum>(value);
+                    throw new Exception($"Missing mapper for type: {item.GetType().Name}");
+                }
+
+                var proxyInstance = (TCommon) Activator.CreateInstance(mapper.Value, item);
+
+                return proxyInstance;
             }).ToList();
         }
     }
 
-    public class MultiTypeBinderBuilder<TEnum> : IMultiTypeBinderBuilder<TEnum> where TEnum : Enum
+    public class MultiTypeBinderBuilder<TCommon> : IMultiTypeBinderBuilder<TCommon>
     {
-        public readonly Dictionary<Type, Dictionary<TEnum, BasicPropertyInfoBuild>> BasicTypeInfos;
+        private ImmutableDictionary<Type, IReadOnlyDictionary<string, string>> _table;
 
         public MultiTypeBinderBuilder()
         {
-            BasicTypeInfos = new Dictionary<Type, Dictionary<TEnum, BasicPropertyInfoBuild>>();
-        }
-        
-        public IMultiTypeBinderBuilder<TEnum> WithType<TClass>(
-            Func<IBindTypeBuilder<TEnum, TClass>, IMultiTypeBinderBuilder<TEnum>> opt)
-        {
-            return opt(new BindTypeBuilder<TEnum, TClass>(this));
+            _table = ImmutableDictionary<Type, IReadOnlyDictionary<string, string>>.Empty;
         }
 
-        public IMultiTypeBinder<TEnum> Build()
+        public IMultiTypeBinderBuilder<TCommon> WithType<TClass>(
+            Func<IBindTypeBuilder<TCommon, TClass>, IVoid> opt)
         {
-            return new MultiTypeBinder<TEnum>(BasicTypeInfos);
-        }
-    }
+            var rslt = new BindTypeBuilder<TCommon, TClass>();
 
-    public class BindTypeBuilder<TEnum, TClass> : IBindTypeBuilder<TEnum, TClass> where TEnum : Enum
-    {
-        private readonly Dictionary<TEnum, BasicPropertyInfoBuild> BasicPropertyInfos;
+            opt(rslt);
 
-        private readonly MultiTypeBinderBuilder<TEnum> _multiTypeBinderBuilder;
+            _table = _table.Add(typeof(TClass), rslt.Map);            
 
-        public BindTypeBuilder(MultiTypeBinderBuilder<TEnum> multiTypeBinderBuilder)
-        {
-            _multiTypeBinderBuilder = multiTypeBinderBuilder;
-            BasicPropertyInfos = new Dictionary<TEnum, BasicPropertyInfoBuild>();
-        }
-
-        public IBindTypeBuilder<TEnum, TClass> WithProperty<TProperty>(Expression<Func<TClass, TProperty>> property, TEnum key)
-        {
-            BasicPropertyInfos[key] = BasicPropertyInfoBuildUtility.Resolve(property);
-            
             return this;
         }
 
-        public IMultiTypeBinderBuilder<TEnum> FinalizeType()
+        public IMultiTypeBinder<TCommon> Build()
         {
-            foreach (var key in Enum.GetValues(typeof(TEnum)).Cast<TEnum>())
-            {
-                if (!BasicPropertyInfos.ContainsKey(key))
-                {
-                    BasicPropertyInfos[key] = InvalidPropertyInfo(key);
-                }
-            }
-            
-            _multiTypeBinderBuilder.BasicTypeInfos[typeof(TClass)] = BasicPropertyInfos;
+            return new MultiTypeBinder<TCommon>(_table);
+        }
+    }
 
-            return _multiTypeBinderBuilder;
+    public class BindTypeBuilder<TCommon, TClass> : IBindTypeBuilder<TCommon, TClass>
+    {
+        public ImmutableDictionary<string, string> Map { get; private set; }
+
+        public BindTypeBuilder()
+        {
+            Map = ImmutableDictionary.Create<string, string>();
         }
 
-        private static BasicPropertyInfoBuild InvalidPropertyInfo(TEnum key)
+        public IBindTypeBuilder<TCommon, TClass> WithProperty<TProperty>(Expression<Func<TCommon, TProperty>> fromExpr,
+            Expression<Func<TClass, TProperty>> toExpr)
         {
-            return new BasicPropertyInfoBuild
-            {
-                GetValue = _ => throw new Exception($"Getter for {key} is not defined"),
-                SetValue = (x, _) => throw new Exception($"Setter for {key} is not defined")
-            };
+            var (fromExprName, toExprName) = Resolve(fromExpr, toExpr);
+
+            Map = Map.Add(fromExprName, toExprName);
+
+            return this;
         }
+
+        public IVoid FinalizeType()
+        {
+            // Nothing
+            return new Void();
+        }
+    }
+
+    public class Void : IVoid
+    {
     }
 }

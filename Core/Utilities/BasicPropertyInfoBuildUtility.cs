@@ -4,9 +4,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using MultiTypeBinderExpr.Models;
 
-namespace MultiTypeBinderExpr.Utilities
+namespace MultiTypeBinderExprTypeSafe.Utilities
 {
     /// <summary>
     /// Utility to create an assignment 
@@ -16,44 +15,20 @@ namespace MultiTypeBinderExpr.Utilities
         /// <summary>
         /// Generate assignment function from the provided member
         /// </summary>
-        /// <param name="expr"></param>
+        /// <param name="fromExpr"></param>
+        /// <param name="toExpr"></param>
+        /// <typeparam name="TCommon"></typeparam>
+        /// <typeparam name="TClass"></typeparam>
+        /// <typeparam name="TProperty"></typeparam>
         /// <returns></returns>
-        public static BasicPropertyInfoBuild Resolve<TClass, TProperty>(Expression<Func<TClass, TProperty>> expr)
+        /// <exception cref="Exception"></exception>
+        public static KeyValuePair<string, string> Resolve<TCommon, TClass, TProperty>(
+            Expression<Func<TCommon, TProperty>> fromExpr, Expression<Func<TClass, TProperty>> toExpr)
         {
-            var memberInfo = new MemberExpressionVisitor(expr).ResolveMemberInfo();
-            var source = Expression.Parameter(typeof(TClass));
-            var property = Expression.Parameter(typeof(TProperty));
-
-            var propertyInfo = (PropertyInfo) memberInfo;
-            var memberAccessExpr = property;
-            var setterMethodInfo = propertyInfo.GetSetMethod();
-            var getterMethodInfo = propertyInfo.GetGetMethod();
-
-            if (setterMethodInfo == null)
-            {
-                throw new Exception($"Setter for member: {memberInfo.Name} does not exist");
-            }
-
-            if (getterMethodInfo == null)
-            {
-                throw new Exception($"Getter for member: {memberInfo.Name} does not exist");
-            }
-
-            var (getterExpr, setterExpr) = (
-                Expression.Call(source, getterMethodInfo),
-                Expression.Call(source, setterMethodInfo, memberAccessExpr)
+            return new KeyValuePair<string, string>(
+                new MemberExpressionVisitor(fromExpr).ResolveMemberInfo().Name,
+                new MemberExpressionVisitor(toExpr).ResolveMemberInfo().Name
             );
-
-            var (getterFunc, setterFunc) = (
-                Expression.Lambda<Func<TClass, TProperty>>(getterExpr, source).Compile(),
-                Expression.Lambda<Action<TClass, TProperty>>(setterExpr, source, property).Compile()
-            );
-
-            return new BasicPropertyInfoBuild
-            {
-                GetValue = x => getterFunc((TClass) x),
-                SetValue = (x, y) => setterFunc((TClass) x, (TProperty) y)
-            };
         }
     }
 

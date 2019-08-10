@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>netcoreapp2.2</TargetFramework>
-        <RootNamespace>MultiTypeBinderExpr</RootNamespace>
+        <RootNamespace>MultiTypeBinderExprTypeSafe</RootNamespace>
         <LangVersion>7.3</LangVersion>
         <AssemblyName>multi-type-binder-expr</AssemblyName>
         <LangVersion>latest</LangVersion>
@@ -13,5 +13,9 @@
         <PackageReleaseNotes>Working state</PackageReleaseNotes>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="System.Reflection.Emit" Version="4.3.0" />
+    </ItemGroup>
 
 </Project>

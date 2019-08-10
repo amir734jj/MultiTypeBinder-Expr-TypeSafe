@@ -1,17 +1,12 @@
-# MultiTypeBinder-Expr
+# MultiTypeBinder-Expr-TypeSafe
 
-This library is similar to my [MultiTypeBinder](https://github.com/amir734jj/MultiTypeBinder) but used LINQ Expression tress to build getter and setters.
-
-[![pipeline status](https://gitlab.com/hesamian/MultiTypeBinder-Expr/badges/master/pipeline.svg)](https://gitlab.com/hesamian/MultiTypeBinder-Expr/commits/master)
-
-
-[NuGet](https://www.nuget.org/packages/MultiTypeBinder-Expr/)
+This library is similar to my [MultiTypeBinder](https://github.com/amir734jj/MultiTypeBinder) but uses `System.Reflection.Emit` to emit common proxy type.
 
 
 ```csharp
-public enum Key
+public interface ICommon
 {
-    Name
+    string Name { get; set; }
 }
 
 public class EntityA
@@ -24,36 +19,30 @@ public class EntityB
     public string Name { get; set; }
 }
 
-public class MultiTypeBinderTest
+public class MultiTypeBinderExprTypeSafeTest
 {    
     [Fact]
     public void Test_Basic_Set()
     {
         // Arrange
-        var a = new EntityA {Name = "A"};
-        var b = new EntityB {Name = "B"};
+        var a = new EntityA {Name1 = "A"};
+        var b = new EntityB {Name2 = "B"};
         
-        var multiTypeItems = new MultiTypeBinderBuilder<Key>()
-            .WithType<EntityA>(opt1 => opt1
-                .WithProperty(x => x.Name1, Key.Name)
+        var multiTypeItems = new MultiTypeBinderBuilder<ICommon>()
+            .WithType<EntityA> (x =>
+                x.WithProperty(y => y.Name, y => y.Name1)
                 .FinalizeType())
-            .WithType<EntityB>(opt1 => opt1
-                .WithProperty(x => x.Name2, Key.Name)
+            .WithType<EntityB> (x =>
+                x.WithProperty(y => y.Name, y => y.Name2)
                 .FinalizeType())
-            .Build()
-            .Map(new List<object> {a, b});
+            .Build();
 
         // Act
-        multiTypeItems.FirstOrDefault()[Key.Name] = "updated A";
-        multiTypeItems.LastOrDefault()[Key.Name] = "updated B";
+        var commons = _utility.Map(new object[] { entityA, entityB });
         
-        var v1 = multiTypeItems.FirstOrDefault()[Key.Name];
-        var v2 = multiTypeItems.LastOrDefault()[Key.Name];
-
         // Assert
-        Assert.Equal(2, multiTypeItems.Count());
-        Assert.Equal("updated A", v1);
-        Assert.Equal("updated B", v2);
+        Assert.Equal(commons.First().Name, entityA.Name1);
+        Assert.Equal(commons.Last().Name, entityB.Name2);
     }
 }
  ```

@@ -1,46 +1,29 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq.Expressions;
 
-namespace MultiTypeBinderExpr.Interfaces
+namespace MultiTypeBinderExprTypeSafe.Interfaces
 {
-    public interface IMultiTypeItem<in TEnum> where TEnum : Enum
+    public interface IMultiTypeBinder<TCommon>
     {
-        object this[TEnum key] { get; set; }
+        List<TCommon> Map(IEnumerable<object> items);
     }
     
-    public interface IMultiTypeBinder<TEnum> where TEnum: Enum
+    public interface  IMultiTypeBinderBuilder<TCommon>
     {
-        List<MultiTypeItem<TEnum>> Map(IEnumerable<object> items);
-    }
-    
-    public interface  IMultiTypeBinderBuilder<TEnum> where TEnum: Enum
-    {
-        IMultiTypeBinderBuilder<TEnum> WithType<TClass>(Func<IBindTypeBuilder<TEnum, TClass>, IMultiTypeBinderBuilder<TEnum>> opt);
+        IMultiTypeBinderBuilder<TCommon> WithType<TClass>(Func<IBindTypeBuilder<TCommon, TClass>, IVoid> opt);
 
-        IMultiTypeBinder<TEnum> Build();
+        IMultiTypeBinder<TCommon> Build();
     }
 
-    public interface IBindTypeBuilder<TEnum, TClass> where TEnum : Enum
+    public interface IBindTypeBuilder<TCommon, TClass>
     {
-        IBindTypeBuilder<TEnum, TClass>
-            WithProperty<TProperty>(Expression<Func<TClass, TProperty>> property, TEnum key);
+        ImmutableDictionary<string, string> Map { get; }
 
-        IMultiTypeBinderBuilder<TEnum> FinalizeType();
-    }
+        IBindTypeBuilder<TCommon, TClass>
+            WithProperty<TProperty>(Expression<Func<TCommon, TProperty>> fromExpr, Expression<Func<TClass, TProperty>> toExpr);
 
-    public interface IBindPropertyBuilder<TEnum, TClass, TProperty> where TEnum : Enum
-    {
-        IBindPropertyGetterBuilder<TEnum, TClass, TProperty> Bind(TEnum key);
-    }
-
-    public interface IBindPropertyGetterBuilder<TEnum, TClass, TProperty> where TEnum : Enum
-    {
-        IBindPropertySetterBuilder<TEnum, TClass, TProperty> WithGetter(Func<TClass, TProperty> getter);
-    }
-
-    public interface IBindPropertySetterBuilder<TEnum, TClass, out TProperty> where TEnum : Enum
-    {
-        IBindTypeBuilder<TEnum, TClass> WithSetter(Action<TClass, TProperty> setter);
+        IVoid FinalizeType();
     }
 }
