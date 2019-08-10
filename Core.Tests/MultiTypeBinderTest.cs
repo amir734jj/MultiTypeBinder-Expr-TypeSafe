@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using MultiTypeBinderExprTypeSafe.Interfaces;
 using Xunit;
@@ -7,6 +8,8 @@ namespace MultiTypeBinderExprTypeSafe.Tests
     public interface ICommon
     {
         string Name { get; set; }
+
+        string Missing { get; set; }
     }
 
     public class EntityA
@@ -43,13 +46,13 @@ namespace MultiTypeBinderExprTypeSafe.Tests
             var entityB = new EntityB {Name2 = "Test2"};
 
             // Act
-            var commons = _utility.Map(new object[] { entityA, entityB });
+            var commons = _utility.Map(new object[] {entityA, entityB});
 
             // Assert
             Assert.Equal(commons.First().Name, entityA.Name1);
             Assert.Equal(commons.Last().Name, entityB.Name2);
         }
-        
+
         [Fact]
         public void Test__Setter()
         {
@@ -58,13 +61,43 @@ namespace MultiTypeBinderExprTypeSafe.Tests
             var entityB = new EntityB {Name2 = "Test2"};
 
             // Act
-            var commons = _utility.Map(new object[] { entityA, entityB });
+            var commons = _utility.Map(new object[] {entityA, entityB});
             commons.First().Name = "Updated Test1";
             commons.Last().Name = "Updated Test2";
 
             // Assert
             Assert.Equal(commons.First().Name, entityA.Name1);
             Assert.Equal(commons.Last().Name, entityB.Name2);
+        }
+
+        [Fact]
+        public void Test__Getter_MissingProp()
+        {
+            // Arrange
+            var entityA = new EntityA {Name1 = "Test1"};
+            var entityB = new EntityB {Name2 = "Test2"};
+
+            // Act
+            var commons = _utility.Map(new object[] {entityA, entityB});
+
+            // Assert
+            Assert.Throws<NotImplementedException>(() => commons.First().Missing);
+            Assert.Throws<NotImplementedException>(() => commons.First().Missing);
+        }
+
+        [Fact]
+        public void Test__Setter_MissingProp()
+        {
+            // Arrange
+            var entityA = new EntityA {Name1 = "Test1"};
+            var entityB = new EntityB {Name2 = "Test2"};
+
+            // Act
+            var commons = _utility.Map(new object[] {entityA, entityB});
+
+            // Assert
+            Assert.Throws<NotImplementedException>(() => commons.First().Missing = "Updated Test1");
+            Assert.Throws<NotImplementedException>(() => commons.First().Missing = "Updated Test2");
         }
     }
 }

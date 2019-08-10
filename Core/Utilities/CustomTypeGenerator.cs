@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using MultiTypeBinderExprTypeSafe.Interfaces;
@@ -80,6 +81,11 @@ namespace MultiTypeBinderExprTypeSafe.Utilities
                 EmitProperty(commonPrpName, sourcePrpName);
             }
 
+            foreach (var notImplementedProp in cmType.GetProperties().Where(x => !members.ContainsKey(x.Name)))
+            {
+                EmitNotImplemented(notImplementedProp);
+            }
+
             EmittedType = _tb.CreateType();
         }
 
@@ -92,6 +98,62 @@ namespace MultiTypeBinderExprTypeSafe.Utilities
                 FieldAttributes.InitOnly);
 
             return entityBldr;
+        }
+
+        private void EmitNotImplemented(PropertyInfo cmProp)
+        {
+            var (cmPropGetter, cmPropSetter) = (cmProp.GetGetMethod(), cmProp.GetSetMethod());
+
+            var propertyBldr =
+                _tb.DefineProperty(cmProp.Name, PropertyAttributes.None, cmProp.PropertyType, Type.EmptyTypes);
+
+            if (cmPropGetter != null)
+            {
+                var getPropMthdBldr = _tb.DefineMethod($"get_{cmProp.Name}",
+                    MethodAttributes.Public |
+                    MethodAttributes.Virtual |
+                    MethodAttributes.SpecialName |
+                    MethodAttributes.HideBySig,
+                    cmProp.PropertyType, Type.EmptyTypes);
+
+                var getIl = getPropMthdBldr.GetILGenerator();
+                var getPropertyLbl = getIl.DefineLabel();
+                var exitGetLbl = getIl.DefineLabel();
+
+                getIl.MarkLabel(getPropertyLbl);
+                getIl.Emit(OpCodes.Ldarg_0);
+                getIl.ThrowException(typeof(NotImplementedException));
+                getIl.MarkLabel(exitGetLbl);
+                getIl.Emit(OpCodes.Ret);
+
+                _tb.DefineMethodOverride(getPropMthdBldr, cmPropGetter);
+
+                propertyBldr.SetGetMethod(getPropMthdBldr);
+            }
+
+            if (cmPropSetter != null)
+            {
+                var setPropMthdBldr = _tb.DefineMethod($"set_{cmProp.Name}",
+                    MethodAttributes.Public |
+                    MethodAttributes.Virtual |
+                    MethodAttributes.SpecialName |
+                    MethodAttributes.HideBySig,
+                    null, new[] {cmProp.PropertyType});
+
+                var setIl = setPropMthdBldr.GetILGenerator();
+                var modifyPropertyLbl = setIl.DefineLabel();
+                var exitSetLbl = setIl.DefineLabel();
+
+                setIl.MarkLabel(modifyPropertyLbl);
+                setIl.Emit(OpCodes.Ldarg_0);
+                setIl.ThrowException(typeof(NotImplementedException));
+                setIl.MarkLabel(exitSetLbl);
+                setIl.Emit(OpCodes.Ret);
+
+                _tb.DefineMethodOverride(setPropMthdBldr, cmPropSetter);
+
+                propertyBldr.SetSetMethod(setPropMthdBldr);
+            }
         }
 
         private void EmitProperty(string cPn, string sPn)
