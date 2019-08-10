@@ -99,5 +99,17 @@ namespace MultiTypeBinderExprTypeSafe.Tests
             Assert.Throws<NotImplementedException>(() => commons.First().Missing = "Updated Test1");
             Assert.Throws<NotImplementedException>(() => commons.First().Missing = "Updated Test2");
         }
+
+        [Fact]
+        public void Test__Missing_Mapper()
+        {
+            // Arrange
+            var entityA = new EntityA {Name1 = "Test1"};
+            var entityB = new EntityB {Name2 = "Test2"};
+            var random = new string("Random Str!");
+
+            // Act, Assert
+            Assert.Throws<Exception>(() => _utility.Map(new object[] {entityA, entityB, random}));
+        }
     }
 }

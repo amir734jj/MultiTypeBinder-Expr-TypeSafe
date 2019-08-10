@@ -18,7 +18,8 @@ namespace MultiTypeBinderExprTypeSafe
         {
             var cmType = typeof(TCommon);
 
-            _augmentedTable = table.ToDictionary(x => x, x => new CustomTypeGenerator(x.Key, cmType, x.Value).EmittedType);
+            _augmentedTable =
+                table.ToDictionary(x => x, x => new CustomTypeGenerator(x.Key, cmType, x.Value).EmittedType);
         }
 
         public List<TCommon> Map(IEnumerable<object> items)
@@ -57,7 +58,7 @@ namespace MultiTypeBinderExprTypeSafe
 
             opt(rslt);
 
-            _table = _table.Add(typeof(TClass), rslt.Map);            
+            _table = _table.Add(typeof(TClass), rslt.Map);
 
             return this;
         }

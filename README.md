@@ -2,6 +2,11 @@
 
 This library is similar to my [MultiTypeBinder](https://github.com/amir734jj/MultiTypeBinder) but uses `System.Reflection.Emit` to emit common proxy type.
 
+[![pipeline status](https://gitlab.com/hesamian/MultiTypeBinder-Expr-TypeSafe/badges/master/pipeline.svg)](https://gitlab.com/hesamian/MultiTypeBinder-Expr-TypeSafe/commits/master)
+
+
+[NuGet](https://www.nuget.org/packages/multi-type-binder-expr-typesafe/)
+
 
 ```csharp
 public interface ICommon
