@@ -1,6 +1,6 @@
 # MultiTypeBinder-Expr-TypeSafe
 
-This library is similar to my [MultiTypeBinder](https://github.com/amir734jj/MultiTypeBinder) but uses `System.Reflection.Emit` to emit common proxy type.
+This library is similar to my [object-binder](https://github.com/amir734jj/object-binder) but uses `System.Reflection.Emit` to emit common proxy type.
 
 [![pipeline status](https://gitlab.com/hesamian/MultiTypeBinder-Expr-TypeSafe/badges/master/pipeline.svg)](https://gitlab.com/hesamian/MultiTypeBinder-Expr-TypeSafe/commits/master)
 
